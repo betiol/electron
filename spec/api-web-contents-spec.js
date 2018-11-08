@@ -1,6 +1,9 @@
 'use strict'
 
 const assert = require('assert')
+const chai = require('chai')
+const ChildProcess = require('child_process')
+const dirtyChai = require('dirty-chai')
 const http = require('http')
 const path = require('path')
 const {closeWindow} = require('./window-helpers')
@@ -8,6 +11,9 @@ const {emittedOnce} = require('./events-helpers')
 
 const {ipcRenderer, remote, clipboard} = require('electron')
 const {BrowserWindow, webContents, ipcMain, session} = remote
+
+const {expect} = chai
+chai.use(dirtyChai)
 
 const isCi = remote.getGlobal('isCi')
 
@@ -664,6 +670,16 @@ describe('webContents module', () => {
     it('does not throw', () => {
       assert.equal(w.webContents.setIgnoreMenuShortcuts(true), undefined)
       assert.equal(w.webContents.setIgnoreMenuShortcuts(false), undefined)
+    })
+  })
+
+  describe('create()', () => {
+    it('does not crash on exit', async () => {
+      const appPath = path.join(__dirname, 'fixtures', 'api', 'leak-exit-webcontents.js')
+      const electronPath = remote.getGlobal('process').execPath
+      const appProcess = ChildProcess.spawn(electronPath, [appPath])
+      const [code] = await emittedOnce(appProcess, 'close')
+      expect(code).to.equal(0)
     })
   })
 
